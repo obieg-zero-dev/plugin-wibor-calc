@@ -1,10 +1,12 @@
+import type { LoanInput, LoanResult, RateEntry, ScheduleEntry } from './types'
+
 export const toDateStr = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 export const daysBetween = (a: Date, b: Date) =>
   Math.round((b.getTime() - a.getTime()) / 86400000)
 
-export const resolveWibor = (d: Date, data: { date: string; rate: number }[]) => {
+export const resolveWibor = (d: Date, data: RateEntry[]) => {
   const s = toDateStr(d)
   let b = data[0]?.rate ?? 0
   for (const e of data) {
@@ -33,23 +35,9 @@ export const ann = (b: number, r: number, m: number) => {
 export const int = (b: number, p: number, d: number, base = 360) =>
   b * (p / 100) * d / base
 
-export interface LoanInput {
-  loanAmount: number
-  margin: number
-  loanPeriodMonths: number
-  startDate: Date
-  paymentDay: number
-  bridgeMargin: number
-  bridgeEndDate: Date | null
-  wiborTenor: string
-  wiborData: { date: string; rate: number }[]
-  interestBase: number
-  repaymentType: string
-}
-
 const TENOR_RESET: Record<string, number> = { '1M': 1, '3M': 3, '6M': 6 }
 
-export function calculateLoan(input: LoanInput) {
+export function calculateLoan(input: LoanInput): LoanResult | null {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const wd = input.wiborData || []
@@ -60,7 +48,7 @@ export function calculateLoan(input: LoanInput) {
   const resetMonths = TENOR_RESET[input.wiborTenor] || 3
   const isDecreasing = input.repaymentType === 'decreasing'
 
-  const schedule: any[] = []
+  const schedule: ScheduleEntry[] = []
   let bal = input.loanAmount, balNW = input.loanAmount, balNR = input.loanAmount, prev = new Date(input.startDate)
   let wibor = resolveWibor(input.startDate, wd), inst = 0, instNW = 0, reset = 0
   const a = { pastTotal: 0, pastPr: 0, pastInt: 0, pastIntW: 0, pastIntM: 0, pastIntB: 0, pastN: 0, futTotal: 0, futInt: 0, futIntW: 0, futIntM: 0, futN: 0, pastNoWibor: 0, pastIntNW: 0, pastPrNW: 0, futNoWibor: 0, futIntNW: 0, curInst: 0, curNW: 0, pastNoRate: 0, futNoRate: 0, curNR: 0 }
@@ -129,7 +117,7 @@ export function calculateLoan(input: LoanInput) {
 }
 
 export function parseStooqCSV(text: string) {
-  return text.trim().split('\n').reduce<{ date: string; rate: number }[]>((acc, line) => {
+  return text.trim().split('\n').reduce<RateEntry[]>((acc, line) => {
     const p = line.split(',')
     if (p.length < 5) return acc
     let d = p[0].trim()

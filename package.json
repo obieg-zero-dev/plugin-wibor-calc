@@ -1,6 +1,6 @@
 {
   "name": "@obieg-zero/plugin-wibor-calc",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Kalkulator kredytu hipotecznego WIBOR",
   "price": 1000,
   "private": true
